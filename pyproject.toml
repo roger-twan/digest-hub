@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "analytics-digest"
+version = "1.0.0"
+description = "Automated GA4 analytics reports delivered to Telegram"
+requires-python = ">=3.11"
+dependencies = [
+    "google-analytics-data>=0.18.7",
+    "google-auth>=2.29.0",
+    "requests>=2.31.0",
+]
+
+[project.scripts]
+analytics-digest = "src.main:main"
+
+[tool.uv]
+python-version = "3.11"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
