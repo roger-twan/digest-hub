@@ -2,8 +2,8 @@ name: Weekly Analytics Report
 
 on:
   schedule:
-    # Run at 9:00 AM UTC every Monday
-    - cron: '0 9 * * 1'
+    # Run at 12:00 AM UTC every Monday (8:00 AM Beijing time)
+    - cron: '0 0 * * 1'
   workflow_dispatch:
 
 jobs:

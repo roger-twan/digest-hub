@@ -91,11 +91,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # Install dependencies
 uv sync
 
-# Set environment variables
-export GA4_PROPERTY_ID="your_property_id"
-export GA4_CREDENTIALS_JSON='{"type": "service_account", ...}'
-export TELEGRAM_BOT_TOKEN="your_bot_token"
-export TELEGRAM_CHAT_ID="your_chat_id"
+# Set up environment variables
+cp .env.sample .env
+# Edit .env with your actual values from the setup steps above
 
 # Run test
 uv run python src/main.py test
@@ -111,8 +109,8 @@ uv run python src/main.py weekly
 
 The GitHub Actions workflows are configured to run:
 
-- **Daily Reports**: Every day at 9:00 AM UTC
-- **Weekly Reports**: Every Monday at 9:00 AM UTC
+- **Daily Reports**: Every day at 8:00 AM Beijing time (00:00 UTC)
+- **Weekly Reports**: Every Monday at 8:00 AM Beijing time (00:00 UTC)
 
 You can modify the schedule in `.github/workflows/daily-report.yml` and `.github/workflows/weekly-report.yml`.
 
@@ -127,8 +125,8 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 # │ │ │ │ │
 # │ │ │ │ │
 # │ │ │ │ │
-- cron: '0 9 * * *'  # 9:00 AM UTC daily
-- cron: '0 9 * * 1'  # 9:00 AM UTC Monday
+- cron: '0 0 * * *'  # 8:00 AM Beijing time (00:00 UTC) daily
+- cron: '0 0 * * 1'  # 8:00 AM Beijing time (00:00 UTC) Monday
 ```
 
 ## Project Structure
@@ -143,6 +141,7 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 │   ├── main.py                 # Entry point and CLI
 │   ├── ga4_client.py           # GA4 API client
 │   └── telegram_notifier.py    # Telegram bot integration
+├── .env.sample                 # Environment variables template
 ├── pyproject.toml              # Project configuration (uv)
 ├── uv.lock                     # Locked dependencies (auto-generated)
 └── README.md                   # This file

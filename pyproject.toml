@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "google-analytics-data>=0.18.7",
     "google-auth>=2.29.0",
+    "python-dotenv>=1.0.0",
     "requests>=2.31.0",
 ]
 
@@ -17,7 +18,7 @@ dependencies = [
 analytics-digest = "src.main:main"
 
 [tool.uv]
-python-version = "3.11"
+required-version = ">=0.8.0"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

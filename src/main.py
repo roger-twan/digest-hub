@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Main entry point for GA4 Analytics Digest."""
 
-import os
 import sys
 import argparse
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if present
+load_dotenv()
+
 from ga4_client import GA4Client
 from telegram_notifier import TelegramNotifier
 
