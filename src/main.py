@@ -10,23 +10,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from ga4_client import GA4Client
-from telegram_notifier import TelegramNotifier
+from discord_notifier import DiscordNotifier
 
 
 def run_daily_report():
-    """Run daily analytics report and send to Telegram."""
+    """Run daily analytics report and send to Discord."""
     print("📊 Generating daily analytics report...")
     
     try:
         # Initialize clients
         ga4 = GA4Client()
-        telegram = TelegramNotifier()
+        discord = DiscordNotifier()
         
         # Fetch yesterday's data
         data = ga4.get_daily_report()
         
-        # Send to Telegram
-        success = telegram.send_daily_report(data)
+        # Send to Discord
+        success = discord.send_daily_report(data)
         
         if success:
             print(f"✅ Daily report sent successfully for {data['date']}")
@@ -41,19 +41,19 @@ def run_daily_report():
 
 
 def run_weekly_report():
-    """Run weekly analytics report and send to Telegram."""
+    """Run weekly analytics report and send to Discord."""
     print("📊 Generating weekly analytics report...")
     
     try:
         # Initialize clients
         ga4 = GA4Client()
-        telegram = TelegramNotifier()
+        discord = DiscordNotifier()
         
         # Fetch last 7 days data
         data = ga4.get_weekly_report()
         
-        # Send to Telegram
-        success = telegram.send_weekly_report(data)
+        # Send to Discord
+        success = discord.send_weekly_report(data)
         
         if success:
             print(f"✅ Weekly report sent successfully")
@@ -69,7 +69,7 @@ def run_weekly_report():
 
 
 def test_connection():
-    """Test GA4 and Telegram connections."""
+    """Test GA4 and Discord connections."""
     print("🧪 Testing connections...")
     
     try:
@@ -80,16 +80,17 @@ def test_connection():
         print(f"   ✅ GA4 connection successful!")
         print(f"   Found {test_data['total_users']} users, {test_data['total_page_views']} page views")
         
-        # Test Telegram
-        print("\n2. Testing Telegram connection...")
-        telegram = TelegramNotifier()
-        test_msg = "🔧 *Connection Test*\nYour GA4 Analytics Digest is configured correctly!"
-        success = telegram.send_message(test_msg)
+        # Test Discord
+        print("\n2. Testing Discord connection...")
+        discord = DiscordNotifier()
+        test_msg = "🔧 **Connection Test**\nYour GA4 Analytics Digest is configured correctly!"
+        success = discord.send_message(test_msg)
         
         if success:
-            print("   ✅ Telegram connection successful!")
+            print("   ✅ Discord connection successful!")
         else:
-            print("   ❌ Telegram connection failed")
+            print("   ❌ Discord connection failed")
+            sys.exit(1)
             
         print("\n✨ All tests completed!")
         

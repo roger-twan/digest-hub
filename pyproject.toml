@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "analytics-digest"
 version = "1.0.0"
-description = "Automated GA4 analytics reports delivered to Telegram"
+description = "Automated GA4 analytics reports delivered to Discord"
 requires-python = ">=3.11"
 dependencies = [
     "google-analytics-data>=0.18.7",

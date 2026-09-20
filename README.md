@@ -1,6 +1,6 @@
 # 📊 GA4 Analytics Digest
 
-Automated daily and weekly web analytics reports from Google Analytics 4 (GA4) delivered to your Telegram.
+Automated daily and weekly web analytics reports from Google Analytics 4 (GA4) delivered to Discord.
 
 ## Features
 
@@ -41,21 +41,15 @@ Automated daily and weekly web analytics reports from Google Analytics 4 (GA4) d
 - In GA4 Admin, look under "Property Settings"
 - Your Property ID is the number (e.g., `123456789`)
 
-### 2. Telegram Bot Setup
+### 2. Discord Webhook Setup
 
-#### Create a Bot
-1. Message [@BotFather](https://t.me/BotFather) on Telegram
-2. Send `/newbot` and follow instructions
-3. Save the bot token (looks like `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+1. Open the target Discord channel's settings, then **Integrations > Webhooks**.
+2. Create a webhook and copy its URL.
+3. Set `DISCORD_WEBHOOK_URL` in your local `.env` and GitHub Actions repository secrets.
 
-#### Get Your Chat ID
-1. Message [@userinfobot](https://t.me/userinfobot) on Telegram
-2. It will reply with your user ID - save this number
-
-Alternatively:
-1. Message your new bot
-2. Visit: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
-3. Look for `"chat":{"id":123456789` - that's your chat ID
+Daily reports, weekly reports, and connection tests now send only to Discord.
+Telegram integration and existing credentials are retained but are not used by the CLI or workflows.
+Missing Discord configuration causes an error; there is no fallback to Telegram.
 
 ### 3. GitHub Repository Setup
 
@@ -70,8 +64,7 @@ Go to Settings > Secrets and variables > Actions > Repository secrets, then add:
 |-------------|-------|
 | `GA4_PROPERTY_ID` | Your GA4 property ID (just the number) |
 | `GA4_CREDENTIALS_JSON` | Copy-paste the entire contents of your service account JSON key file |
-| `TELEGRAM_BOT_TOKEN` | Your Telegram bot token |
-| `TELEGRAM_CHAT_ID` | Your Telegram chat ID (can be a number or channel like `@channelname`) |
+| `DISCORD_WEBHOOK_URL` | Your Discord channel webhook URL |
 
 ### 4. Test Your Setup
 
@@ -80,7 +73,7 @@ Run the connection test manually:
 1. Go to Actions tab in your GitHub repository
 2. Select "Daily Analytics Report" or "Weekly Analytics Report"
 3. Click "Run workflow"
-4. Check that you receive a test message on Telegram
+4. Check that you receive the selected analytics report on Discord
 
 Or run locally with [uv](https://github.com/astral-sh/uv) (requires Python 3.11+):
 
@@ -140,7 +133,9 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 ├── src/
 │   ├── main.py                 # Entry point and CLI
 │   ├── ga4_client.py           # GA4 API client
-│   └── telegram_notifier.py    # Telegram bot integration
+│   ├── discord_notifier.py     # Active Discord webhook integration
+│   ├── report_formatter.py     # Shared report formatting
+│   └── telegram_notifier.py    # Inactive Telegram integration
 ├── .env.sample                 # Environment variables template
 ├── pyproject.toml              # Project configuration (uv)
 ├── uv.lock                     # Locked dependencies (auto-generated)
@@ -166,10 +161,13 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 - Check that the Google Analytics Data API is enabled
 - Ensure your Property ID is correct (just the number, not the full property string)
 
-### Telegram Issues
-- Verify bot token is correct
-- Make sure you've messaged the bot first (bots can't initiate conversations)
-- Check that the chat ID is correct (use @userinfobot to verify)
+### Discord Issues
+- Verify `DISCORD_WEBHOOK_URL` is set and the webhook still exists.
+- Use a regular text channel webhook (forum channels require thread configuration).
+- Reports are split into messages of at most 2,000 characters and mentions are disabled.
+- Delivery waits for Discord confirmation. A failed or unconfirmed request stops the report without automatic retries to avoid duplicate messages.
+- Webhook URLs are secrets; do not commit them or include them in logs.
+- API reference: [Discord Execute Webhook](https://docs.discord.com/developers/resources/webhook#execute-webhook).
 
 ### GitHub Actions Issues
 - Check the Actions logs for detailed error messages
