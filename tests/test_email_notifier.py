@@ -220,5 +220,41 @@ class TrendingRenderingTests(unittest.TestCase):
         self.assertEqual(message['X-Mailer'], 'digest-hub')
 
 
+class ResponsiveMarkupTests(unittest.TestCase):
+    def setUp(self):
+        self.notifier = EmailNotifier(username='sender@example.com', password='x')
+
+    def render(self, doc):
+        return self.notifier.render_html(doc)
+
+    def test_viewport_and_color_scheme_meta(self):
+        html = self.render(self.notifier.build_trending(TRENDING, 'daily'))
+        self.assertIn('name="viewport" content="width=device-width, initial-scale=1"', html)
+        self.assertIn('name="color-scheme" content="light dark"', html)
+
+    def test_mobile_media_query_stacks_kpis(self):
+        html = self.render(self.notifier.build_daily(DAILY))
+        self.assertIn('@media (max-width: 480px)', html)
+        self.assertIn('.kpi { display: block', html)
+        self.assertIn('.pad { padding-left: 18px', html)
+        self.assertIn('.kpi-value { font-size: 20px', html)
+
+    def test_card_is_fluid_up_to_600px(self):
+        html = self.render(self.notifier.build_daily(DAILY))
+        self.assertIn('width:100%;max-width:600px', html)
+
+    def test_long_tokens_can_wrap(self):
+        long_name = 'owner/' + 'a' * 80
+        html = self.render(self.notifier.build_trending(
+            [dict(TRENDING[0], repo=long_name)], 'daily'))
+        self.assertIn('word-break:break-word', html)
+        self.assertIn('overflow-wrap:anywhere', html)
+
+    def test_links_are_visually_distinct(self):
+        html = self.render(self.notifier.build_trending(TRENDING, 'daily'))
+        self.assertIn('color:#2563eb', html)
+        self.assertIn('text-decoration:underline', html)
+
+
 if __name__ == '__main__':
     unittest.main()

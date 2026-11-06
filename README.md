@@ -11,6 +11,7 @@ Scheduled workflows that fetch data from the internet and email the digest repor
 - ⏱️ **Engagement Stats**: Session duration and bounce rates
 - ⭐ **GitHub Trending**: Daily and weekly trending repositories, sent as their own digest
 - 📧 **Email Delivery**: Styled HTML report plus a plain-text fallback, sent through Gmail SMTP
+- 📱 **Mobile-friendly**: Fluid layout, stacked KPI cards on narrow screens, and dark-mode colours where the client supports them
 - 🤖 **Fully Automated**: GitHub Actions handles everything
 
 ## Setup Instructions

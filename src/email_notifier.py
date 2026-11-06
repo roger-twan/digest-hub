@@ -19,6 +19,30 @@ DEFAULT_TIMEOUT = 30
 DEFAULT_FROM_NAME = "Digest Hub"
 DEFAULT_SOURCE = "Digest Hub"
 
+# Inline styles remain the baseline; this block only adapts them for narrow
+# screens and dark mode, where the client supports media queries at all.
+_STYLE = """
+      body { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+      @media (max-width: 480px) {
+        .page { padding: 16px 8px !important; }
+        .pad { padding-left: 18px !important; padding-right: 18px !important; }
+        .kpi { display: block !important; width: 100% !important; padding: 4px 0 !important; }
+        .kpi-value { font-size: 20px !important; }
+        .meta { font-size: 13px !important; }
+        .eyebrow { font-size: 11px !important; letter-spacing: 1.2px !important; }
+      }
+      @media (prefers-color-scheme: dark) {
+        .page { background-color: #0b1220 !important; }
+        .card { background-color: #111827 !important; }
+        .header { background-color: #1f2937 !important; }
+        .footer { background-color: #0f172a !important; }
+        .ink { color: #e5e7eb !important; }
+        .muted { color: #9ca3af !important; }
+        .hair { border-color: #1f2937 !important; }
+        .kpi-box { border-color: #1f2937 !important; }
+      }
+"""
+
 
 def _num(value) -> str:
     try:
@@ -307,25 +331,28 @@ class EmailNotifier:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 <title>{heading}</title>
+<style>{_STYLE}</style>
 </head>
 <body style="margin:0;padding:0;background-color:#eef0f4;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef0f4;padding:24px 12px;">
+<table role="presentation" class="page" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef0f4;padding:24px 12px;">
   <tr>
     <td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2933;">
+      <table role="presentation" class="card" align="center" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:14px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2933;">
         <tr>
-          <td style="background-color:#111827;padding:26px 30px;">
-            <div style="font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#9ca3af;">{eyebrow}</div>
+          <td class="header" style="background-color:#111827;padding:26px 30px;">
+            <div class="eyebrow" style="font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#9ca3af;">{eyebrow}</div>
             <div style="font-size:24px;font-weight:600;color:#ffffff;margin-top:6px;">{heading}</div>
             <div style="font-size:14px;color:#cbd5e1;margin-top:4px;">{subheading}</div>
           </td>
         </tr>
         <tr>
-          <td style="padding:26px 30px 6px;">{body}</td>
+          <td class="pad" style="padding:26px 30px 6px;">{body}</td>
         </tr>
         <tr>
-          <td style="padding:18px 30px;background-color:#f9fafb;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;">
+          <td class="pad footer muted" style="padding:18px 30px;background-color:#f9fafb;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;">
             Generated {generated} · {source}
           </td>
         </tr>
@@ -339,7 +366,7 @@ class EmailNotifier:
     @staticmethod
     def _section_title(title: str) -> str:
         return (
-            f'<div style="font-size:16px;font-weight:600;color:#111827;margin:0 0 12px;">'
+            f'<div class="ink" style="font-size:16px;font-weight:600;color:#111827;margin:0 0 12px;">'
             f"{escape(title)}</div>"
         )
 
@@ -351,14 +378,14 @@ class EmailNotifier:
             cells = []
             for label, value in items[index:index + 2]:
                 cells.append(
-                    '<td width="50%" style="padding:6px;vertical-align:top;">'
-                    '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;">'
-                    f'<div style="font-size:11px;letter-spacing:.9px;text-transform:uppercase;color:#6b7280;">{escape(label)}</div>'
-                    f'<div style="font-size:22px;font-weight:600;color:#111827;margin-top:6px;">{escape(value)}</div>'
+                    '<td class="kpi" width="50%" style="padding:6px;vertical-align:top;">'
+                    '<div class="kpi-box" style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;">'
+                    f'<div class="muted" style="font-size:11px;letter-spacing:.9px;text-transform:uppercase;color:#6b7280;">{escape(label)}</div>'
+                    f'<div class="ink kpi-value" style="font-size:22px;font-weight:600;color:#111827;margin-top:6px;">{escape(value)}</div>'
                     "</div></td>"
                 )
             if len(items[index:index + 2]) == 1:
-                cells.append('<td width="50%"></td>')
+                cells.append('<td class="kpi" width="50%"></td>')
             rows.append(f"<tr>{''.join(cells)}</tr>")
         return (
             '<div style="margin-bottom:26px;">'
@@ -376,10 +403,10 @@ class EmailNotifier:
             border = "" if index == len(block["rows"]) else "border-bottom:1px solid #f1f3f5;"
             rows.append(
                 "<tr>"
-                f'<td style="padding:9px 0;{border}width:26px;color:#9ca3af;font-size:13px;">{index}</td>'
-                f'<td style="padding:9px 0;{border}font-size:14px;color:#1f2933;">{escape(name)}</td>'
-                f'<td align="right" style="padding:9px 0;{border}font-size:14px;font-weight:600;color:#111827;white-space:nowrap;">'
-                f"{escape(value)} <span style=\"font-weight:400;color:#6b7280;\">{escape(block['unit'])}</span></td>"
+                f'<td class="hair" style="padding:9px 0;{border}width:26px;color:#9ca3af;font-size:13px;">{index}</td>'
+                f'<td class="ink hair" style="padding:9px 0;{border}font-size:14px;color:#1f2933;word-break:break-word;overflow-wrap:anywhere;">{escape(name)}</td>'
+                f'<td class="ink hair" align="right" style="padding:9px 0;{border}font-size:14px;font-weight:600;color:#111827;white-space:nowrap;">'
+                f"{escape(value)} <span class=\"muted\" style=\"font-weight:400;color:#6b7280;\">{escape(block['unit'])}</span></td>"
                 "</tr>"
             )
         return (
@@ -397,9 +424,9 @@ class EmailNotifier:
             border = "" if index == len(block["rows"]) - 1 else "border-bottom:1px solid #f1f3f5;"
             rows.append(
                 "<tr>"
-                f'<td style="padding:9px 0;{border}font-size:14px;color:#1f2933;">{escape(day)}</td>'
-                f'<td align="right" style="padding:9px 0;{border}font-size:14px;color:#1f2933;">{escape(users)} users</td>'
-                f'<td align="right" style="padding:9px 0;{border}font-size:14px;font-weight:600;color:#111827;">{escape(views)} views</td>'
+                f'<td class="ink hair" style="padding:9px 0;{border}font-size:14px;color:#1f2933;">{escape(day)}</td>'
+                f'<td class="ink hair" align="right" style="padding:9px 0;{border}font-size:14px;color:#1f2933;">{escape(users)} users</td>'
+                f'<td class="ink hair" align="right" style="padding:9px 0;{border}font-size:14px;font-weight:600;color:#111827;">{escape(views)} views</td>'
                 "</tr>"
             )
         return (
@@ -416,13 +443,14 @@ class EmailNotifier:
         for index, repo in enumerate(block["rows"], 1):
             border = "" if index == len(block["rows"]) else "border-bottom:1px solid #f1f3f5;"
             meta = (
-                f'<span style="font-weight:600;color:#111827;">{escape(repo["stars"])}'
+                f'<span class="ink" style="font-weight:600;color:#111827;">{escape(repo["stars"])}'
                 f'</span> total'
             )
             if repo["language"]:
                 meta += f" · {escape(repo['language'])}"
             description = (
-                f'<div style="font-size:13px;color:#6b7280;margin-top:3px;">'
+                f'<div class="muted" style="font-size:13px;color:#6b7280;margin-top:3px;'
+                f'word-break:break-word;overflow-wrap:anywhere;">'
                 f'{escape(repo["description"])}</div>'
                 if repo["description"] else ""
             )
@@ -430,17 +458,17 @@ class EmailNotifier:
             if name:
                 href = escape(f"https://github.com/{name}", quote=True)
                 title = (
-                    f'<a href="{href}" style="color:#111827;text-decoration:none;">'
+                    f'<a class="link" href="{href}" style="color:#2563eb;text-decoration:underline;">'
                     f"{escape(name)}</a>"
                 )
             else:
                 title = ""
             rows.append(
                 "<tr>"
-                f'<td style="padding:10px 0;{border}">'
-                f'<div style="font-size:14px;font-weight:600;">{title}</div>'
+                f'<td class="hair" style="padding:10px 0;{border}">'
+                f'<div style="font-size:14px;font-weight:600;word-break:break-word;overflow-wrap:anywhere;">{title}</div>'
                 f"{description}"
-                f'<div style="font-size:12px;color:#6b7280;margin-top:3px;">{meta}</div>'
+                f'<div class="muted meta" style="font-size:12px;color:#6b7280;margin-top:3px;">{meta}</div>'
                 "</td></tr>"
             )
         return (
