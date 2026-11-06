@@ -36,19 +36,26 @@ class ParseTests(unittest.TestCase):
         self.assertTrue(first['description'])
         self.assertGreater(first['stars'], 0)
 
-    def test_rows_are_sorted_by_total_stars(self):
-        for since, fixture in (('daily', 'trending_daily.html'),
-                               ('weekly', 'trending_weekly.html')):
-            stars = [repo['stars'] for repo in parse_trending(load(fixture), since=since)]
-            self.assertEqual(stars, sorted(stars, reverse=True), since)
-            self.assertEqual(stars[0], max(stars), since)
+    def test_rows_keep_github_trending_order(self):
+        for since, fixture, expected in (
+            ('daily', 'trending_daily.html',
+             ['zed-industries/zed', 'NVIDIA/auto-ontology', 'rails/rails']),
+            ('weekly', 'trending_weekly.html',
+             ['thedotmack/claude-mem', 'Donchitos/Claude-Code-Game-Studios',
+              'pingdotgg/t3code']),
+        ):
+            repos = parse_trending(load(fixture), since=since)
+            self.assertEqual([repo['repo'] for repo in repos], expected, since)
+            # The page order is by momentum, not by total stars.
+            stars = [repo['stars'] for repo in repos]
+            self.assertNotEqual(stars, sorted(stars, reverse=True), since)
 
     def test_rows_carry_only_star_totals(self):
         repo = parse_trending(load('trending_daily.html'))[0]
         self.assertNotIn('period', repo)
         self.assertNotIn('period_stars', repo)
 
-    def test_limit_keeps_trending_selection_then_sorts(self):
+    def test_limit_returns_first_trending_rows(self):
         repos = parse_trending(load('trending_daily.html'), limit=2)
         self.assertEqual(len(repos), 2)
         self.assertEqual([r['repo'] for r in repos], ['zed-industries/zed', 'NVIDIA/auto-ontology'])

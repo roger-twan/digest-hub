@@ -38,7 +38,7 @@ def _count(text: str) -> int:
 
 
 def parse_trending(html: str, since: str = "daily", limit: int = DEFAULT_LIMIT) -> List[Dict]:
-    """Parse a Trending page into repositories sorted by total stars."""
+    """Parse a Trending page into repositories in GitHub's trending order."""
     if since not in PERIODS:
         raise ValueError(f"since must be one of {list(PERIODS)}")
 
@@ -64,10 +64,8 @@ def parse_trending(html: str, since: str = "daily", limit: int = DEFAULT_LIMIT) 
         raise TrendingError(
             "GitHub Trending returned no repositories; the page markup may have changed."
         )
-    # Keep GitHub's trending selection, then order the digest by total stars.
-    selected = rows[:limit] if limit else rows
-    selected.sort(key=lambda repo: repo["stars"], reverse=True)
-    return selected
+    # Keep GitHub's own trending order; it already ranks by momentum.
+    return rows[:limit] if limit else rows
 
 
 def fetch_trending(since: str = "daily", limit: int = DEFAULT_LIMIT,

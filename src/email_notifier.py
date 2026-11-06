@@ -220,7 +220,6 @@ class EmailNotifier:
         label = "Weekly" if weekly else "Daily"
         date = datetime.now().strftime("%Y-%m-%d")
 
-        ordered = sorted(repos, key=lambda repo: repo.get("stars") or 0, reverse=True)
         rows = [
             {
                 "name": repo.get("repo", ""),
@@ -228,7 +227,7 @@ class EmailNotifier:
                 "language": repo.get("language") or "",
                 "stars": _num(repo.get("stars")),
             }
-            for repo in ordered
+            for repo in repos
         ]
         blocks = [{
             "type": "repos",

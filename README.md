@@ -194,7 +194,7 @@ alternative for terminal and text-only mail clients.
 ### GitHub Trending Digest
 - Top 10 repositories from [github.com/trending](https://github.com/trending), daily or weekly
 - Repository name (linked in the HTML email), description, primary language
-- Total stars, sorted from most to least
+- Total stars, with repositories kept in GitHub's trending order
 
 The trending digest is a separate email, so a scraping break never affects the analytics
 reports. GitHub has no Trending API, so `src/trending_client.py` parses the public page;

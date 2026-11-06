@@ -196,14 +196,13 @@ class TrendingRenderingTests(unittest.TestCase):
         self.assertIn('href="https://github.com/zed-industries/zed"', html)
         self.assertIn('>zed-industries/zed</a>', html)
 
-    def test_repos_are_ordered_by_total_stars(self):
-        unsorted = [TRENDING[1], TRENDING[0]]
-        doc = self.notifier.build_trending(unsorted, 'daily')
+    def test_repos_keep_input_order(self):
+        doc = self.notifier.build_trending([TRENDING[1], TRENDING[0]], 'daily')
         names = [row['name'] for row in doc['blocks'][0]['rows']]
-        self.assertEqual(names, ['zed-industries/zed', 'acme/widget'])
+        self.assertEqual(names, ['acme/widget', 'zed-industries/zed'])
 
         text = self.notifier.render_text(doc)
-        self.assertLess(text.index('zed-industries/zed'), text.index('acme/widget'))
+        self.assertLess(text.index('acme/widget'), text.index('zed-industries/zed'))
 
     def test_weekly_subject_and_source(self):
         doc = self.notifier.build_trending(TRENDING, 'weekly')
