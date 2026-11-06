@@ -1,6 +1,6 @@
 # 📊 Digest Hub
 
-Scheduled workflows that fetch data from the internet and email you digest reports — currently daily and weekly web analytics from Google Analytics 4 (GA4).
+Scheduled workflows that fetch data from the internet and email the digest reports — daily and weekly web analytics from Google Analytics 4 (GA4), plus GitHub Trending repositories.
 
 ## Features
 
@@ -9,6 +9,7 @@ Scheduled workflows that fetch data from the internet and email you digest repor
 - 🔥 **Top Pages**: See your most popular content
 - 👥 **User Metrics**: Track users, sessions, page views, and more
 - ⏱️ **Engagement Stats**: Session duration and bounce rates
+- ⭐ **GitHub Trending**: Daily and weekly trending repositories, sent as their own digest
 - 📧 **Email Delivery**: Styled HTML report plus a plain-text fallback, sent through Gmail SMTP
 - 🤖 **Fully Automated**: GitHub Actions handles everything
 
@@ -112,6 +113,10 @@ uv run python src/main.py daily
 # Run weekly report manually
 uv run python src/main.py weekly
 
+# Run the GitHub Trending digest manually (top 10, daily or weekly)
+uv run python src/main.py trending daily
+uv run python src/main.py trending weekly
+
 # Run the test suite
 uv run python -m unittest discover -s tests
 ```
@@ -122,8 +127,12 @@ The GitHub Actions workflows are configured to run:
 
 - **Daily Reports**: Every day at 8:00 AM Beijing time (00:00 UTC)
 - **Weekly Reports**: Every Monday at 8:00 AM Beijing time (00:00 UTC)
+- **Daily GitHub Trending**: Every day at 8:01 AM Beijing time (00:01 UTC)
+- **Weekly GitHub Trending**: Every Monday at 8:01 AM Beijing time (00:01 UTC)
 
-You can modify the schedule in `.github/workflows/daily-report.yml` and `.github/workflows/weekly-report.yml`.
+The trending digests are offset by one minute so the two emails do not arrive at once.
+You can modify the schedules in `.github/workflows/` (`daily-report.yml`, `weekly-report.yml`,
+`trending-daily.yml`, `trending-weekly.yml`).
 
 ### Cron Schedule Format
 
@@ -136,8 +145,10 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 # │ │ │ │ │
 # │ │ │ │ │
 # │ │ │ │ │
-- cron: '0 0 * * *'  # 8:00 AM Beijing time (00:00 UTC) daily
-- cron: '0 0 * * 1'  # 8:00 AM Beijing time (00:00 UTC) Monday
+- cron: '0 0 * * *'  # 8:00 AM Beijing time (00:00 UTC) daily analytics
+- cron: '0 0 * * 1'  # 8:00 AM Beijing time (00:00 UTC) Monday analytics
+- cron: '1 0 * * *'  # 8:01 AM Beijing time (00:01 UTC) daily trending
+- cron: '1 0 * * 1'  # 8:01 AM Beijing time (00:01 UTC) Monday trending
 ```
 
 ## Project Structure
@@ -146,14 +157,19 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 .
 ├── .github/
 │   └── workflows/
-│       ├── daily-report.yml    # Daily report automation
-│       └── weekly-report.yml   # Weekly report automation
+│       ├── daily-report.yml    # Daily analytics report
+│       ├── weekly-report.yml   # Weekly analytics report
+│       ├── trending-daily.yml  # Daily GitHub Trending digest
+│       └── trending-weekly.yml # Weekly GitHub Trending digest
 ├── src/
 │   ├── main.py                 # Entry point and CLI
 │   ├── ga4_client.py           # GA4 API client
+│   ├── trending_client.py      # GitHub Trending scraper
 │   └── email_notifier.py       # Gmail SMTP integration (HTML + text)
 ├── tests/
-│   └── test_email_notifier.py  # Email rendering and SMTP delivery tests
+│   ├── fixtures/               # Saved Trending HTML for offline parser tests
+│   ├── test_email_notifier.py  # Email rendering and SMTP delivery tests
+│   └── test_trending_client.py # Trending parsing tests
 ├── .env.sample                 # Environment variables template
 ├── pyproject.toml              # Project configuration (uv)
 ├── uv.lock                     # Locked dependencies (auto-generated)
@@ -174,6 +190,17 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 
 Both reports are emailed as an HTML message with KPI cards and tables, plus a plain-text
 alternative for terminal and text-only mail clients.
+
+### GitHub Trending Digest
+- Top 10 repositories from [github.com/trending](https://github.com/trending), daily or weekly
+- Repository name (linked in the HTML email), description, primary language
+- Total stars, sorted from most to least
+
+The trending digest is a separate email, so a scraping break never affects the analytics
+reports. GitHub has no Trending API, so `src/trending_client.py` parses the public page;
+if GitHub changes its markup, the job fails loudly instead of emailing an empty digest,
+and the saved fixtures in `tests/fixtures/` let the parser be repaired offline. It needs
+no credentials — only the shared Gmail settings.
 
 ## Troubleshooting
 

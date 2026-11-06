@@ -149,5 +149,77 @@ class RenderingTests(unittest.TestCase):
         self.assertNotIn('Top Pages', self.notifier.render_text(doc))
 
 
+TRENDING = [
+    {
+        'repo': 'zed-industries/zed',
+        'description': 'Code at the speed of thought',
+        'language': 'Rust',
+        'stars': 93138,
+    },
+    {
+        'repo': 'acme/widget',
+        'description': '',
+        'language': None,
+        'stars': 5,
+    },
+]
+
+
+class TrendingRenderingTests(unittest.TestCase):
+    def setUp(self):
+        self.notifier = EmailNotifier(username='sender@example.com', password='x')
+
+    def test_text_and_html_include_repo_details(self):
+        doc = self.notifier.build_trending(TRENDING, 'daily')
+        text = self.notifier.render_text(doc)
+        html = self.notifier.render_html(doc)
+
+        self.assertIn('GitHub Trending Daily', doc['subject'])
+        self.assertIn('zed-industries/zed', text)
+        self.assertIn('93,138 total', text)
+        self.assertIn('Rust', text)
+        self.assertNotIn('stars today', text)
+        self.assertNotIn('+292', text)
+        self.assertIn('https://github.com/zed-industries/zed', html)
+        self.assertIn('GitHub Trending', html)
+        self.assertNotIn('Google Analytics 4', html)
+        self.assertNotIn('GA4', html)
+
+    def test_repo_rows_do_not_carry_a_raw_url(self):
+        doc = self.notifier.build_trending(TRENDING, 'daily')
+        row = doc['blocks'][0]['rows'][0]
+        self.assertNotIn('url', row)
+        self.assertEqual(row['name'], 'zed-industries/zed')
+
+    def test_html_links_repo_name_to_github(self):
+        html = self.notifier.render_html(self.notifier.build_trending(TRENDING, 'daily'))
+        self.assertIn('href="https://github.com/zed-industries/zed"', html)
+        self.assertIn('>zed-industries/zed</a>', html)
+
+    def test_repos_are_ordered_by_total_stars(self):
+        unsorted = [TRENDING[1], TRENDING[0]]
+        doc = self.notifier.build_trending(unsorted, 'daily')
+        names = [row['name'] for row in doc['blocks'][0]['rows']]
+        self.assertEqual(names, ['zed-industries/zed', 'acme/widget'])
+
+        text = self.notifier.render_text(doc)
+        self.assertLess(text.index('zed-industries/zed'), text.index('acme/widget'))
+
+    def test_weekly_subject_and_source(self):
+        doc = self.notifier.build_trending(TRENDING, 'weekly')
+        self.assertIn('Weekly', doc['subject'])
+        self.assertEqual(doc['source'], 'GitHub Trending')
+        self.assertIn('Trending This Week', self.notifier.render_text(doc))
+
+    def test_digest_headers_follow_the_source(self):
+        with patch('email_notifier.smtplib.SMTP') as smtp:
+            client = smtp.return_value = fake_client()
+            self.assertTrue(self.notifier.send_trending_report(TRENDING, 'daily'))
+
+        message = client.send_message.call_args.args[0]
+        self.assertEqual(message['From'], 'GitHub Trending Digest <sender@example.com>')
+        self.assertEqual(message['X-Mailer'], 'digest-hub')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -8,9 +8,11 @@ version = "1.0.0"
 description = "Scheduled workflows that fetch data from the internet and email me digest reports"
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.12.0",
     "google-analytics-data>=0.18.7",
     "google-auth>=2.29.0",
     "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
 ]
 
 [project.scripts]

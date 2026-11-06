@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Main entry point for GA4 Analytics Digest."""
+"""Main entry point for Digest Hub."""
 
 import sys
 import argparse
@@ -11,6 +11,7 @@ load_dotenv()
 
 from ga4_client import GA4Client
 from email_notifier import EmailNotifier
+from trending_client import fetch_trending
 
 
 def _build_notifier() -> EmailNotifier:
@@ -73,6 +74,29 @@ def run_weekly_report():
         sys.exit(1)
 
 
+def run_trending_report(period: str = "daily"):
+    """Fetch GitHub Trending and send the digest by email."""
+    label = "weekly" if period == "weekly" else "daily"
+    print(f"⭐ Fetching GitHub Trending ({label})...")
+
+    try:
+        notifier = _build_notifier()
+        repos = fetch_trending(label)
+
+        success = notifier.send_trending_report(repos, label)
+        if success:
+            top = repos[0]["repo"] if repos else "none"
+            print(f"✅ Trending digest emailed to {notifier.recipient}")
+            print(f"   {len(repos)} repositories, topped by {top}")
+        else:
+            print("❌ Failed to send trending report")
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"❌ Error running trending report: {e}")
+        sys.exit(1)
+
+
 def test_connection():
     """Test GA4 access and Gmail SMTP delivery."""
     print("🧪 Testing connections...")
@@ -89,8 +113,8 @@ def test_connection():
         print("\n2. Testing Gmail SMTP connection...")
         notifier = _build_notifier()
         success = notifier.send_message(
-            "🔧 GA4 Analytics Digest - connection test",
-            "Your GA4 Analytics Digest is configured correctly.\n\n"
+            "🔧 Digest Hub - connection test",
+            "Your Digest Hub is configured correctly.\n\n"
             f"This test was sent to {notifier.recipient} at "
             f"{datetime.now().strftime('%Y-%m-%d %H:%M')}.",
         )
@@ -110,14 +134,29 @@ def test_connection():
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description='GA4 Analytics Digest')
+    parser = argparse.ArgumentParser(description='Digest Hub')
     parser.add_argument(
         'command',
-        choices=['daily', 'weekly', 'test'],
-        help='Command to run: daily (yesterday\'s report), weekly (last 7 days report), or test (connection test)'
+        choices=['daily', 'weekly', 'test', 'trending'],
+        help=(
+            "Command to run: daily (yesterday's analytics report), weekly (last 7 days "
+            "analytics report), trending (GitHub Trending digest), or test (connection test)"
+        )
+    )
+    parser.add_argument(
+        'period',
+        nargs='?',
+        choices=['daily', 'weekly'],
+        help="Trending period for the 'trending' command (default: daily)"
     )
 
     args = parser.parse_args()
+
+    if args.command == 'trending':
+        run_trending_report(args.period or 'daily')
+        return
+    if args.period:
+        parser.error("the 'period' argument only applies to the 'trending' command")
 
     if args.command == 'daily':
         run_daily_report()

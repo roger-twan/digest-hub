@@ -1,6 +1,6 @@
-"""Gmail SMTP delivery for analytics reports.
+"""Gmail SMTP delivery for digest reports.
 
-The report is sent as a multipart message: a plain-text part for clients that
+Each digest is sent as a multipart message: a plain-text part for clients that
 prefer it, plus a styled HTML part. No third-party mail library is needed.
 """
 
@@ -16,6 +16,8 @@ from typing import Dict, List, Optional, Sequence, Tuple
 DEFAULT_SMTP_HOST = "smtp.gmail.com"
 DEFAULT_SMTP_PORT = 587
 DEFAULT_TIMEOUT = 30
+DEFAULT_FROM_NAME = "Digest Hub"
+DEFAULT_SOURCE = "Digest Hub"
 
 
 def _num(value) -> str:
@@ -106,15 +108,16 @@ class EmailNotifier:
         self.timeout = timeout
 
     # -- delivery ---------------------------------------------------------
-    def send_message(self, subject: str, text: str, html: Optional[str] = None) -> bool:
+    def send_message(self, subject: str, text: str, html: Optional[str] = None,
+                     from_name: Optional[str] = None) -> bool:
         """Send one email. Returns True only when the server accepts it."""
         message = EmailMessage()
-        message["From"] = f"GA4 Analytics Digest <{self.username}>"
+        message["From"] = f"{from_name or DEFAULT_FROM_NAME} <{self.username}>"
         message["To"] = self.recipient
         message["Subject"] = subject
         message["Date"] = formatdate(localtime=True)
         message["Message-ID"] = make_msgid()
-        message["X-Mailer"] = "analytics-digest"
+        message["X-Mailer"] = "digest-hub"
         message.set_content(text)
         if html:
             message.add_alternative(html, subtype="html")
@@ -170,6 +173,8 @@ class EmailNotifier:
             "subject": f"📊 Daily Analytics Report - {date}",
             "heading": "Daily Analytics Report",
             "subheading": date,
+            "from_name": "GA4 Analytics Digest",
+            "source": "Google Analytics 4",
             "blocks": [block for block in blocks if block],
         }
 
@@ -205,7 +210,39 @@ class EmailNotifier:
             "subject": f"📊 Weekly Analytics Report - {start_date} to {end_date}",
             "heading": "Weekly Analytics Report",
             "subheading": f"{start_date} to {end_date}",
+            "from_name": "GA4 Analytics Digest",
+            "source": "Google Analytics 4",
             "blocks": [block for block in blocks if block],
+        }
+
+    def build_trending(self, repos: Sequence[Dict], since: str = "daily") -> Dict:
+        weekly = since == "weekly"
+        label = "Weekly" if weekly else "Daily"
+        date = datetime.now().strftime("%Y-%m-%d")
+
+        ordered = sorted(repos, key=lambda repo: repo.get("stars") or 0, reverse=True)
+        rows = [
+            {
+                "name": repo.get("repo", ""),
+                "description": _truncate(repo.get("description", ""), 150) if repo.get("description") else "",
+                "language": repo.get("language") or "",
+                "stars": _num(repo.get("stars")),
+            }
+            for repo in ordered
+        ]
+        blocks = [{
+            "type": "repos",
+            "title": f"🔥 Trending {'This Week' if weekly else 'Today'}",
+            "rows": rows,
+        }] if rows else []
+
+        return {
+            "subject": f"⭐ GitHub Trending {label} - {date}",
+            "heading": f"GitHub Trending {label}",
+            "subheading": date,
+            "from_name": "GitHub Trending Digest",
+            "source": "GitHub Trending",
+            "blocks": blocks,
         }
 
     # -- rendering --------------------------------------------------------
@@ -231,9 +268,19 @@ class EmailNotifier:
                     f"  {day}: {users} users, {views} views"
                     for day, users, views in block["rows"]
                 )
+            elif block["type"] == "repos":
+                for index, repo in enumerate(block["rows"], 1):
+                    lines.append(f"  {index}. {repo['name']}")
+                    if repo["description"]:
+                        lines.append(f"     {repo['description']}")
+                    meta = f"     {repo['stars']} total"
+                    if repo["language"]:
+                        meta += f" · {repo['language']}"
+                    lines.append(meta)
             lines.append("")
 
-        lines.extend(["--", f"Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} · Google Analytics 4"])
+        source = doc.get("source", DEFAULT_SOURCE)
+        lines.extend(["--", f"Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} · {source}"])
         return "\n".join(lines)
 
     def render_html(self, doc: Dict) -> str:
@@ -245,12 +292,16 @@ class EmailNotifier:
                 sections.append(self._html_ranked(block))
             elif block["type"] == "daily":
                 sections.append(self._html_daily(block))
+            elif block["type"] == "repos":
+                sections.append(self._html_repos(block))
         return self._html_shell(doc, "".join(sections))
 
     @staticmethod
     def _html_shell(doc: Dict, body: str) -> str:
         heading = escape(doc["heading"])
         subheading = escape(doc.get("subheading") or "")
+        eyebrow = escape(doc.get("from_name", DEFAULT_FROM_NAME))
+        source = escape(doc.get("source", DEFAULT_SOURCE))
         generated = escape(datetime.now().strftime("%Y-%m-%d %H:%M"))
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -266,7 +317,7 @@ class EmailNotifier:
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2933;">
         <tr>
           <td style="background-color:#111827;padding:26px 30px;">
-            <div style="font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#9ca3af;">GA4 Analytics Digest</div>
+            <div style="font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#9ca3af;">{eyebrow}</div>
             <div style="font-size:24px;font-weight:600;color:#ffffff;margin-top:6px;">{heading}</div>
             <div style="font-size:14px;color:#cbd5e1;margin-top:4px;">{subheading}</div>
           </td>
@@ -276,7 +327,7 @@ class EmailNotifier:
         </tr>
         <tr>
           <td style="padding:18px 30px;background-color:#f9fafb;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;">
-            Generated {generated} · Google Analytics 4
+            Generated {generated} · {source}
           </td>
         </tr>
       </table>
@@ -360,11 +411,61 @@ class EmailNotifier:
             + "</table></div>"
         )
 
+    @classmethod
+    def _html_repos(cls, block: Dict) -> str:
+        rows = []
+        for index, repo in enumerate(block["rows"], 1):
+            border = "" if index == len(block["rows"]) else "border-bottom:1px solid #f1f3f5;"
+            meta = (
+                f'<span style="font-weight:600;color:#111827;">{escape(repo["stars"])}'
+                f'</span> total'
+            )
+            if repo["language"]:
+                meta += f" · {escape(repo['language'])}"
+            description = (
+                f'<div style="font-size:13px;color:#6b7280;margin-top:3px;">'
+                f'{escape(repo["description"])}</div>'
+                if repo["description"] else ""
+            )
+            name = repo.get("name", "")
+            if name:
+                href = escape(f"https://github.com/{name}", quote=True)
+                title = (
+                    f'<a href="{href}" style="color:#111827;text-decoration:none;">'
+                    f"{escape(name)}</a>"
+                )
+            else:
+                title = ""
+            rows.append(
+                "<tr>"
+                f'<td style="padding:10px 0;{border}">'
+                f'<div style="font-size:14px;font-weight:600;">{title}</div>'
+                f"{description}"
+                f'<div style="font-size:12px;color:#6b7280;margin-top:3px;">{meta}</div>'
+                "</td></tr>"
+            )
+        return (
+            '<div style="margin-bottom:26px;">'
+            + cls._section_title(block["title"])
+            + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
+            + "".join(rows)
+            + "</table></div>"
+        )
+
     # -- public senders ---------------------------------------------------
+    def _send_doc(self, doc: Dict) -> bool:
+        return self.send_message(
+            doc["subject"],
+            self.render_text(doc),
+            self.render_html(doc),
+            from_name=doc.get("from_name"),
+        )
+
     def send_daily_report(self, data: Dict) -> bool:
-        doc = self.build_daily(data)
-        return self.send_message(doc["subject"], self.render_text(doc), self.render_html(doc))
+        return self._send_doc(self.build_daily(data))
 
     def send_weekly_report(self, data: Dict) -> bool:
-        doc = self.build_weekly(data)
-        return self.send_message(doc["subject"], self.render_text(doc), self.render_html(doc))
+        return self._send_doc(self.build_weekly(data))
+
+    def send_trending_report(self, repos: Sequence[Dict], since: str = "daily") -> bool:
+        return self._send_doc(self.build_trending(repos, since))
