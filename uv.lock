@@ -8,25 +8,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "analytics-digest"
-version = "1.0.0"
-source = { editable = "." }
-dependencies = [
-    { name = "google-analytics-data" },
-    { name = "google-auth" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "google-analytics-data", specifier = ">=0.18.7" },
-    { name = "google-auth", specifier = ">=2.29.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "requests", specifier = ">=2.31.0" },
-]
-
-[[package]]
 name = "certifi"
 version = "2026.4.22"
 source = { registry = "https://pypi.org/simple" }
@@ -251,6 +232,23 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/53/cb358a80e9e359529f496870dd08c102aa8a4b5b9f9064f00f0d6ed5b527/cryptography-47.0.0-pp311-pypy311_pp73-manylinux_2_34_aarch64.whl", hash = "sha256:f7db373287273d8af1414cf95dc4118b13ffdc62be521997b0f2b270771fef50", size = 4587486, upload-time = "2026-04-24T19:54:44.908Z" },
     { url = "https://files.pythonhosted.org/packages/8b/57/aaa3d53876467a226f9a7a82fd14dd48058ad2de1948493442dfa16e2ffd/cryptography-47.0.0-pp311-pypy311_pp73-manylinux_2_34_x86_64.whl", hash = "sha256:9fe6b7c64926c765f9dff301f9c1b867febcda5768868ca084e18589113732ab", size = 4626327, upload-time = "2026-04-24T19:54:47.813Z" },
     { url = "https://files.pythonhosted.org/packages/ab/9c/51f28c3550276bcf35660703ba0ab829a90b88be8cd98a71ef23c2413913/cryptography-47.0.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:cffbba3392df0fa8629bb7f43454ee2925059ee158e23c54620b9063912b86c8", size = 3698916, upload-time = "2026-04-24T19:54:49.782Z" },
+]
+
+[[package]]
+name = "digest-hub"
+version = "1.0.0"
+source = { editable = "." }
+dependencies = [
+    { name = "google-analytics-data" },
+    { name = "google-auth" },
+    { name = "python-dotenv" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "google-analytics-data", specifier = ">=0.18.7" },
+    { name = "google-auth", specifier = ">=2.29.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
 
 [[package]]

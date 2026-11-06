@@ -1,6 +1,6 @@
-# 📊 GA4 Analytics Digest
+# 📊 Digest Hub
 
-Automated daily and weekly web analytics reports from Google Analytics 4 (GA4) delivered to Discord.
+Scheduled workflows that fetch data from the internet and email you digest reports — currently daily and weekly web analytics from Google Analytics 4 (GA4).
 
 ## Features
 
@@ -9,6 +9,7 @@ Automated daily and weekly web analytics reports from Google Analytics 4 (GA4) d
 - 🔥 **Top Pages**: See your most popular content
 - 👥 **User Metrics**: Track users, sessions, page views, and more
 - ⏱️ **Engagement Stats**: Session duration and bounce rates
+- 📧 **Email Delivery**: Styled HTML report plus a plain-text fallback, sent through Gmail SMTP
 - 🤖 **Fully Automated**: GitHub Actions handles everything
 
 ## Setup Instructions
@@ -41,15 +42,27 @@ Automated daily and weekly web analytics reports from Google Analytics 4 (GA4) d
 - In GA4 Admin, look under "Property Settings"
 - Your Property ID is the number (e.g., `123456789`)
 
-### 2. Discord Webhook Setup
+### 2. Gmail SMTP Setup
 
-1. Open the target Discord channel's settings, then **Integrations > Webhooks**.
-2. Create a webhook and copy its URL.
-3. Set `DISCORD_WEBHOOK_URL` in your local `.env` and GitHub Actions repository secrets.
+Reports are emailed through Gmail's SMTP server using a Google **App Password**.
 
-Daily reports, weekly reports, and connection tests now send only to Discord.
-Telegram integration and existing credentials are retained but are not used by the CLI or workflows.
-Missing Discord configuration causes an error; there is no fallback to Telegram.
+1. Turn on **2-Step Verification** for the sending Google account:
+   [myaccount.google.com/security](https://myaccount.google.com/security).
+2. Create an App Password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+   (app "Mail", device "Other"). It is 16 characters and is shown only once.
+3. Set these values in your local `.env` and in GitHub Actions repository secrets:
+
+   | Variable | Meaning |
+   |----------|---------|
+   | `GMAIL_USER` | Gmail address that sends the reports |
+   | `GMAIL_APP_PASSWORD` | The 16-character App Password (not your normal password) |
+   | `EMAIL_TO` | Recipient address; comma-separate several. Defaults to `GMAIL_USER` |
+
+Delivery uses `smtp.gmail.com` on port 587 with STARTTLS. Set `SMTP_HOST` / `SMTP_PORT`
+to use another endpoint; port 465 switches to implicit TLS.
+
+Each report is sent as a multipart email: a styled HTML part plus a plain-text fallback.
+Email is the only delivery channel; missing Gmail configuration causes an error.
 
 ### 3. GitHub Repository Setup
 
@@ -64,7 +77,9 @@ Go to Settings > Secrets and variables > Actions > Repository secrets, then add:
 |-------------|-------|
 | `GA4_PROPERTY_ID` | Your GA4 property ID (just the number) |
 | `GA4_CREDENTIALS_JSON` | Copy-paste the entire contents of your service account JSON key file |
-| `DISCORD_WEBHOOK_URL` | Your Discord channel webhook URL |
+| `GMAIL_USER` | Gmail address that sends the reports |
+| `GMAIL_APP_PASSWORD` | 16-character Google App Password |
+| `EMAIL_TO` | Recipient address (optional; defaults to `GMAIL_USER`) |
 
 ### 4. Test Your Setup
 
@@ -73,7 +88,7 @@ Run the connection test manually:
 1. Go to Actions tab in your GitHub repository
 2. Select "Daily Analytics Report" or "Weekly Analytics Report"
 3. Click "Run workflow"
-4. Check that you receive the selected analytics report on Discord
+4. Check that you receive the selected analytics report in your inbox
 
 Or run locally with [uv](https://github.com/astral-sh/uv) (requires Python 3.11+):
 
@@ -88,7 +103,7 @@ uv sync
 cp .env.sample .env
 # Edit .env with your actual values from the setup steps above
 
-# Run test
+# Run test (sends a test email)
 uv run python src/main.py test
 
 # Run daily report manually
@@ -96,6 +111,9 @@ uv run python src/main.py daily
 
 # Run weekly report manually
 uv run python src/main.py weekly
+
+# Run the test suite
+uv run python -m unittest discover -s tests
 ```
 
 ## Automation Schedule
@@ -133,9 +151,9 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 ├── src/
 │   ├── main.py                 # Entry point and CLI
 │   ├── ga4_client.py           # GA4 API client
-│   ├── discord_notifier.py     # Active Discord webhook integration
-│   ├── report_formatter.py     # Shared report formatting
-│   └── telegram_notifier.py    # Inactive Telegram integration
+│   └── email_notifier.py       # Gmail SMTP integration (HTML + text)
+├── tests/
+│   └── test_email_notifier.py  # Email rendering and SMTP delivery tests
 ├── .env.sample                 # Environment variables template
 ├── pyproject.toml              # Project configuration (uv)
 ├── uv.lock                     # Locked dependencies (auto-generated)
@@ -147,12 +165,15 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 ### Daily Report
 - Total users, new users, sessions, page views
 - Average session duration and bounce rate
-- Top 5 pages by views
+- Top 5 countries and top 5 pages by views
 
 ### Weekly Report
 - Weekly totals for all metrics
 - Daily breakdown for the week
-- Top 5 pages for the week
+- Top 5 countries and top 5 pages for the week
+
+Both reports are emailed as an HTML message with KPI cards and tables, plus a plain-text
+alternative for terminal and text-only mail clients.
 
 ## Troubleshooting
 
@@ -161,17 +182,19 @@ You can modify the schedule in `.github/workflows/daily-report.yml` and `.github
 - Check that the Google Analytics Data API is enabled
 - Ensure your Property ID is correct (just the number, not the full property string)
 
-### Discord Issues
-- Verify `DISCORD_WEBHOOK_URL` is set and the webhook still exists.
-- Use a regular text channel webhook (forum channels require thread configuration).
-- Reports are split into messages of at most 2,000 characters and mentions are disabled.
-- Delivery waits for Discord confirmation. A failed or unconfirmed request stops the report without automatic retries to avoid duplicate messages.
-- Webhook URLs are secrets; do not commit them or include them in logs.
-- API reference: [Discord Execute Webhook](https://docs.discord.com/developers/resources/webhook#execute-webhook).
+### Email Issues
+- `GMAIL_APP_PASSWORD` must be a Google App Password, not the account password. 2-Step
+  Verification has to be enabled before App Passwords can be created.
+- Spaces in the App Password are ignored, so pasted `abcd efgh ijkl mnop` works.
+- Check the spam folder, and add the sender to contacts if reports are filtered.
+- Gmail limits how many messages an account can send per day; normal report volumes are far below it.
+- Delivery failures are reported by error code only — credentials are never logged.
+- Use the `test` command to confirm SMTP login before relying on the schedule.
 
 ### GitHub Actions Issues
 - Check the Actions logs for detailed error messages
-- Verify all secrets are set correctly
+- Verify `GA4_PROPERTY_ID`, `GA4_CREDENTIALS_JSON`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`
+  and `EMAIL_TO` are set as repository secrets
 - Ensure the workflow files are in `.github/workflows/`
 
 ## License
